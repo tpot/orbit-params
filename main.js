@@ -95,6 +95,55 @@ const grid = new THREE.GridHelper(20, 20, 0x2b3a55, 0x1a2233);
 grid.position.y = -1.5;
 scene.add(grid);
 
+// Create a circular orbit at given radius and inclination (degrees)
+function createOrbit(radius = 2, inclinationDeg = 0, segments = 128, color = 0xffffff) {
+  // create line points for circular orbit in XZ plane
+  const pts = new Float32Array((segments + 1) * 3);
+  for (let i = 0; i <= segments; i++) {
+    const t = (i / segments) * Math.PI * 2;
+    const x = radius * Math.cos(t);
+    const z = radius * Math.sin(t);
+    const y = 0;
+    const idx = i * 3;
+    pts[idx] = x;
+    pts[idx + 1] = y;
+    pts[idx + 2] = z;
+  }
+
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute("position", new THREE.BufferAttribute(pts, 3));
+  const mat = new THREE.LineBasicMaterial({ color: color });
+  const orbitLine = new THREE.LineLoop(geom, mat);
+
+  // create a transparent orbital plane (filled circle) slightly below/above the line
+  const planeGeom = new THREE.CircleGeometry(radius, Math.max(32, segments));
+  const planeMat = new THREE.MeshStandardMaterial({
+    color: color,
+    transparent: true,
+    opacity: 0.12,
+    side: THREE.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: 1,
+    polygonOffsetUnits: 1,
+  });
+  const orbitPlane = new THREE.Mesh(planeGeom, planeMat);
+  orbitPlane.rotation.x = -Math.PI / 2; // make circle lie in XZ plane
+
+  // group the plane and line and apply inclination to the group
+  const group = new THREE.Group();
+  group.add(orbitPlane);
+  orbitLine.position.y = 0.002;
+  orbitPlane.position.y = 0.001;
+  group.add(orbitLine);
+  group.rotation.x = THREE.MathUtils.degToRad(inclinationDeg);
+  group.name = `orbit_${radius}_${inclinationDeg}`;
+  return group;
+}
+
+// Example: add an inclined orbit at 30 degrees
+const inclinedOrbit = createOrbit(2.2, 30, 256, 0x44ff88);
+scene.add(inclinedOrbit);
+
 const onResize = () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
