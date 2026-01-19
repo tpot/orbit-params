@@ -1,7 +1,16 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js";
+import React, { useEffect, useState } from "https://esm.sh/react@18.2.0";
+import { createRoot } from "https://esm.sh/react-dom@18.2.0/client";
 
 const app = document.getElementById("app");
+let uiRoot = document.getElementById("ui");
+if (!uiRoot) {
+  uiRoot = document.createElement("div");
+  uiRoot.id = "ui";
+  uiRoot.className = "panel";
+  document.body.appendChild(uiRoot);
+}
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0b0f1a);
@@ -107,14 +116,7 @@ const grid = new THREE.GridHelper(20, 20, 0x2b3a55, 0x1a2233);
 grid.position.y = -1.5;
 scene.add(grid);
 
-// Create an orbit line at given semi-major axis, eccentricity, and inclination (degrees)
-function createOrbit(
-  semiMajorAxis = 2,
-  eccentricity = 0,
-  inclinationDeg = 0,
-  segments = 128,
-  color = 0xffffff
-) {
+function buildOrbitPositions(semiMajorAxis, eccentricity, segments) {
   const pts = new Float32Array((segments + 1) * 3);
   for (let i = 0; i <= segments; i++) {
     const t = (i / segments) * Math.PI * 2;
@@ -129,15 +131,37 @@ function createOrbit(
     pts[idx + 1] = y;
     pts[idx + 2] = z;
   }
+  return pts;
+}
 
+// Create an orbit line at given semi-major axis, eccentricity, and inclination (degrees)
+function createOrbit(
+  semiMajorAxis = 2,
+  eccentricity = 0,
+  inclinationDeg = 0,
+  segments = 128,
+  color = 0xffffff
+) {
   const geom = new THREE.BufferGeometry();
-  geom.setAttribute("position", new THREE.BufferAttribute(pts, 3));
+  geom.setAttribute(
+    "position",
+    new THREE.BufferAttribute(buildOrbitPositions(semiMajorAxis, eccentricity, segments), 3)
+  );
   const mat = new THREE.LineBasicMaterial({ color: color });
   const orbitLine = new THREE.LineLoop(geom, mat);
   orbitLine.rotation.x = THREE.MathUtils.degToRad(inclinationDeg);
   orbitLine.position.y = 0.002; // slight offset above equator to avoid z-fighting
   orbitLine.name = `orbit_${semiMajorAxis}_${eccentricity}_${inclinationDeg}`;
   return orbitLine;
+}
+
+function updateOrbitLine(line, semiMajorAxis, eccentricity, segments) {
+  line.geometry.setAttribute(
+    "position",
+    new THREE.BufferAttribute(buildOrbitPositions(semiMajorAxis, eccentricity, segments), 3)
+  );
+  line.geometry.attributes.position.needsUpdate = true;
+  line.geometry.computeBoundingSphere();
 }
 
 // Create a square orbital plane centered at origin with given side length and inclination
@@ -175,11 +199,13 @@ function createOrbitPlane(side = 4, inclinationDeg = 0, color = 0xffffff, opacit
 const orbitSemiMajorAxis = 2;
 const orbitEccentricity = 0.6;
 const orbitInclination = 40;
+const orbitSegments = 256;
+let currentEccentricity = orbitEccentricity;
 const inclinedOrbitLine = createOrbit(
   orbitSemiMajorAxis,
-  orbitEccentricity,
+  currentEccentricity,
   orbitInclination,
-  256,
+  orbitSegments,
   0x44ff88
 );
 scene.add(inclinedOrbitLine);
@@ -193,7 +219,6 @@ scene.add(inclinedOrbitPlane);
 
 // Orbiting satellite along the inclined orbit
 const satSemiMajorAxis = orbitSemiMajorAxis;
-const satEccentricity = orbitEccentricity;
 const satInclinationDeg = orbitInclination;
 const satSpeed = 0.9; // radians per second
 let satAngle = 0;
@@ -202,6 +227,45 @@ const satelliteMat = new THREE.MeshStandardMaterial({ color: 0xff6644, emissive:
 const satellite = new THREE.Mesh(satelliteGeom, satelliteMat);
 satellite.name = "satellite";
 scene.add(satellite);
+
+function setEccentricity(value) {
+  const clamped = Math.min(0.99, Math.max(0, value));
+  currentEccentricity = clamped;
+  updateOrbitLine(inclinedOrbitLine, orbitSemiMajorAxis, currentEccentricity, orbitSegments);
+}
+
+function EccentricityControl({ initial, onChange }) {
+  const [value, setValue] = useState(initial);
+
+  useEffect(() => {
+    onChange(value);
+  }, [value, onChange]);
+
+  return React.createElement(
+    React.Fragment,
+    null,
+    React.createElement(
+      "label",
+      { htmlFor: "eccentricity" },
+      "Eccentricity",
+      React.createElement("span", null, value.toFixed(2))
+    ),
+    React.createElement("input", {
+      id: "eccentricity",
+      type: "range",
+      min: 0,
+      max: 0.99,
+      step: 0.01,
+      value: value,
+      onChange: (event) => setValue(parseFloat(event.target.value)),
+    })
+  );
+}
+
+if (uiRoot) {
+  const root = createRoot(uiRoot);
+  root.render(React.createElement(EccentricityControl, { initial: currentEccentricity, onChange: setEccentricity }));
+}
 
 // clock for consistent motion
 const clock = new THREE.Clock();
@@ -219,8 +283,8 @@ const animate = () => {
   // update satellite angle and position
   satAngle += satSpeed * dt;
   const sr =
-    (satSemiMajorAxis * (1 - satEccentricity * satEccentricity)) /
-    (1 + satEccentricity * Math.cos(satAngle));
+    (satSemiMajorAxis * (1 - currentEccentricity * currentEccentricity)) /
+    (1 + currentEccentricity * Math.cos(satAngle));
   const sx = sr * Math.cos(satAngle);
   const sz = sr * Math.sin(satAngle);
   const spos = new THREE.Vector3(sx, 0, sz);
