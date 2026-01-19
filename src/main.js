@@ -107,13 +107,22 @@ const grid = new THREE.GridHelper(20, 20, 0x2b3a55, 0x1a2233);
 grid.position.y = -1.5;
 scene.add(grid);
 
-// Create a circular orbit line at given radius and inclination (degrees)
-function createOrbit(radius = 2, inclinationDeg = 0, segments = 128, color = 0xffffff) {
+// Create an orbit line at given semi-major axis, eccentricity, and inclination (degrees)
+function createOrbit(
+  semiMajorAxis = 2,
+  eccentricity = 0,
+  inclinationDeg = 0,
+  segments = 128,
+  color = 0xffffff
+) {
   const pts = new Float32Array((segments + 1) * 3);
   for (let i = 0; i <= segments; i++) {
     const t = (i / segments) * Math.PI * 2;
-    const x = radius * Math.cos(t);
-    const z = radius * Math.sin(t);
+    const r =
+      (semiMajorAxis * (1 - eccentricity * eccentricity)) /
+      (1 + eccentricity * Math.cos(t));
+    const x = r * Math.cos(t);
+    const z = r * Math.sin(t);
     const y = 0;
     const idx = i * 3;
     pts[idx] = x;
@@ -127,7 +136,7 @@ function createOrbit(radius = 2, inclinationDeg = 0, segments = 128, color = 0xf
   const orbitLine = new THREE.LineLoop(geom, mat);
   orbitLine.rotation.x = THREE.MathUtils.degToRad(inclinationDeg);
   orbitLine.position.y = 0.002; // slight offset above equator to avoid z-fighting
-  orbitLine.name = `orbit_${radius}_${inclinationDeg}`;
+  orbitLine.name = `orbit_${semiMajorAxis}_${eccentricity}_${inclinationDeg}`;
   return orbitLine;
 }
 
@@ -162,17 +171,30 @@ function createOrbitPlane(side = 4, inclinationDeg = 0, color = 0xffffff, opacit
   return group;
 }
 
-// Example: add an inclined orbit (circular) and separate square orbital plane at 30 degrees
-const orbitRadius = 2.2;
-const orbitInclination = 30;
-const inclinedOrbitLine = createOrbit(orbitRadius, orbitInclination, 256, 0x44ff88);
+// Example: add an inclined orbit (elliptical) and separate square orbital plane at 30 degrees
+const orbitSemiMajorAxis = 2;
+const orbitEccentricity = 0.6;
+const orbitInclination = 40;
+const inclinedOrbitLine = createOrbit(
+  orbitSemiMajorAxis,
+  orbitEccentricity,
+  orbitInclination,
+  256,
+  0x44ff88
+);
 scene.add(inclinedOrbitLine);
-const inclinedOrbitPlane = createOrbitPlane(orbitRadius * 2.0, orbitInclination, 0x44ff88, 0.12);
+const inclinedOrbitPlane = createOrbitPlane(
+  orbitSemiMajorAxis * 2.0,
+  orbitInclination,
+  0x44ff88,
+  0.12
+);
 scene.add(inclinedOrbitPlane);
 
 // Orbiting satellite along the inclined orbit
-const satOrbitRadius = 2.2;
-const satInclinationDeg = 30;
+const satSemiMajorAxis = orbitSemiMajorAxis;
+const satEccentricity = orbitEccentricity;
+const satInclinationDeg = orbitInclination;
 const satSpeed = 0.9; // radians per second
 let satAngle = 0;
 const satelliteGeom = new THREE.SphereGeometry(0.06, 12, 10);
@@ -196,8 +218,11 @@ const animate = () => {
 
   // update satellite angle and position
   satAngle += satSpeed * dt;
-  const sx = satOrbitRadius * Math.cos(satAngle);
-  const sz = satOrbitRadius * Math.sin(satAngle);
+  const sr =
+    (satSemiMajorAxis * (1 - satEccentricity * satEccentricity)) /
+    (1 + satEccentricity * Math.cos(satAngle));
+  const sx = sr * Math.cos(satAngle);
+  const sz = sr * Math.sin(satAngle);
   const spos = new THREE.Vector3(sx, 0, sz);
   // apply inclination rotation about X axis
   spos.applyAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(satInclinationDeg));
