@@ -144,6 +144,20 @@ function createOrbit(radius = 2, inclinationDeg = 0, segments = 128, color = 0xf
 const inclinedOrbit = createOrbit(2.2, 30, 256, 0x44ff88);
 scene.add(inclinedOrbit);
 
+// Orbiting satellite along the inclined orbit
+const satOrbitRadius = 2.2;
+const satInclinationDeg = 30;
+const satSpeed = 0.9; // radians per second
+let satAngle = 0;
+const satelliteGeom = new THREE.SphereGeometry(0.06, 12, 10);
+const satelliteMat = new THREE.MeshStandardMaterial({ color: 0xff6644, emissive: 0x220000 });
+const satellite = new THREE.Mesh(satelliteGeom, satelliteMat);
+satellite.name = "satellite";
+scene.add(satellite);
+
+// clock for consistent motion
+const clock = new THREE.Clock();
+
 const onResize = () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
@@ -152,6 +166,18 @@ const onResize = () => {
 window.addEventListener("resize", onResize);
 
 const animate = () => {
+  const dt = clock.getDelta();
+
+  // update satellite angle and position
+  satAngle += satSpeed * dt;
+  const sx = satOrbitRadius * Math.cos(satAngle);
+  const sz = satOrbitRadius * Math.sin(satAngle);
+  const spos = new THREE.Vector3(sx, 0, sz);
+  // apply inclination rotation about X axis
+  spos.applyAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(satInclinationDeg));
+  // slight offset in Y to avoid z-fighting with orbit plane
+  satellite.position.copy(spos).add(new THREE.Vector3(0, 0.005, 0));
+
   controls.update();
   renderer.render(scene, camera);
   requestAnimationFrame(animate);
