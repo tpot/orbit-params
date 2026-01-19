@@ -63,33 +63,45 @@ const earthMaterial = new THREE.MeshStandardMaterial({
 const earth = new THREE.Mesh(earthGeometry, earthMaterial);
 scene.add(earth);
 
-// Equatorial plane through the middle of the earth
-const equatorGeometry = new THREE.PlaneGeometry(4, 4);
-const equatorMaterial = new THREE.MeshStandardMaterial({
-  color: 0x88ccee,
-  transparent: true,
-  opacity: 0.35,
-  side: THREE.DoubleSide,
-});
-const equator = new THREE.Mesh(equatorGeometry, equatorMaterial);
-equator.rotation.x = -Math.PI / 2; // rotate to XZ plane (horizontal)
-equator.position.y = 0; // through sphere center
-equator.name = "equator";
-scene.add(equator);
+// Equatorial plane helper
+function addEquatorialPlane(scene, size = 4, color = 0x88ccee, opacity = 0.35, y = 0) {
+  const geom = new THREE.PlaneGeometry(size, size);
+  const mat = new THREE.MeshStandardMaterial({
+    color: color,
+    transparent: true,
+    opacity: opacity,
+    side: THREE.DoubleSide,
+  });
+  const mesh = new THREE.Mesh(geom, mat);
+  mesh.rotation.x = -Math.PI / 2; // rotate to XZ plane (horizontal)
+  mesh.position.y = y; // through sphere center by default
+  mesh.name = "equator";
+  scene.add(mesh);
+  return mesh;
+}
+
+const equator = addEquatorialPlane(scene, 4, 0x88ccee, 0.35, 0);
 
 // First Point of Aries reference: radial line + marker on equatorial plane
-const fpaRadius = 4.0;
-const fpaY = 0.003; // slight offset above plane to avoid z-fighting
-const fpaLineMaterial = new THREE.LineBasicMaterial({ color: 0xffdd33 });
-const fpaLinePositions = new Float32Array([0, fpaY, 0, fpaRadius, fpaY, 0]);
-const fpaLineGeometry = new THREE.BufferGeometry();
-fpaLineGeometry.setAttribute(
-  "position",
-  new THREE.BufferAttribute(fpaLinePositions, 3)
-);
-const fpaLine = new THREE.Line(fpaLineGeometry, fpaLineMaterial);
-fpaLine.name = "firstPointLine";
-scene.add(fpaLine);
+function addFirstPointOfAries(scene, radius = 4.0, y = 0.003, color = 0xffdd33) {
+  const group = new THREE.Group();
+
+  const lineMat = new THREE.LineBasicMaterial({ color });
+  const linePositions = new Float32Array([0, y, 0, radius, y, 0]);
+  const lineGeom = new THREE.BufferGeometry();
+  lineGeom.setAttribute("position", new THREE.BufferAttribute(linePositions, 3));
+  const line = new THREE.Line(lineGeom, lineMat);
+  line.name = "firstPointLine";
+  group.add(line);
+
+  group.name = "firstPointGroup";
+
+  scene.add(group);
+  return group;
+}
+
+// add the reference to the scene
+addFirstPointOfAries(scene, 4.0, 0.003, 0xffdd33);
 
 const grid = new THREE.GridHelper(20, 20, 0x2b3a55, 0x1a2233);
 grid.position.y = -1.5;
