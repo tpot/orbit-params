@@ -77,6 +77,20 @@ equator.position.y = 0; // through sphere center
 equator.name = "equator";
 scene.add(equator);
 
+// First Point of Aries reference: radial line + marker on equatorial plane
+const fpaRadius = 4.0;
+const fpaY = 0.003; // slight offset above plane to avoid z-fighting
+const fpaLineMaterial = new THREE.LineBasicMaterial({ color: 0xffdd33 });
+const fpaLinePositions = new Float32Array([0, fpaY, 0, fpaRadius, fpaY, 0]);
+const fpaLineGeometry = new THREE.BufferGeometry();
+fpaLineGeometry.setAttribute(
+  "position",
+  new THREE.BufferAttribute(fpaLinePositions, 3)
+);
+const fpaLine = new THREE.Line(fpaLineGeometry, fpaLineMaterial);
+fpaLine.name = "firstPointLine";
+scene.add(fpaLine);
+
 const grid = new THREE.GridHelper(20, 20, 0x2b3a55, 0x1a2233);
 grid.position.y = -1.5;
 scene.add(grid);
