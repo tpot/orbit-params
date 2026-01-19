@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <radialGradient id="g" cx="35%" cy="30%">
+      <stop offset="0%" stop-color="#8fc3ff"/>
+      <stop offset="100%" stop-color="#2a6df4"/>
+    </radialGradient>
+  </defs>
+  <rect width="128" height="128" rx="20" ry="20" fill="#081223" />
+  <g transform="translate(64,64)">
+    <circle r="36" fill="url(#g)" stroke="#0b2a66" stroke-width="2" />
+    <!-- equator -->
+    <line x1="-44" y1="0" x2="44" y2="0" stroke="#ffffff" stroke-opacity="0.65" stroke-width="2" />
+    <!-- first point marker -->
+    <circle cx="36" cy="0" r="4" fill="#ffdd33" />
+    <!-- subtle glow -->
+    <circle cx="36" cy="0" r="8" fill="#ffdd33" opacity="0.08" />
+  </g>
+</svg>
