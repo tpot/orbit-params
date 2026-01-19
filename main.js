@@ -95,9 +95,8 @@ const grid = new THREE.GridHelper(20, 20, 0x2b3a55, 0x1a2233);
 grid.position.y = -1.5;
 scene.add(grid);
 
-// Create a circular orbit at given radius and inclination (degrees)
+// Create a circular orbit line at given radius and inclination (degrees)
 function createOrbit(radius = 2, inclinationDeg = 0, segments = 128, color = 0xffffff) {
-  // create line points for circular orbit in XZ plane
   const pts = new Float32Array((segments + 1) * 3);
   for (let i = 0; i <= segments; i++) {
     const t = (i / segments) * Math.PI * 2;
@@ -114,35 +113,50 @@ function createOrbit(radius = 2, inclinationDeg = 0, segments = 128, color = 0xf
   geom.setAttribute("position", new THREE.BufferAttribute(pts, 3));
   const mat = new THREE.LineBasicMaterial({ color: color });
   const orbitLine = new THREE.LineLoop(geom, mat);
+  orbitLine.rotation.x = THREE.MathUtils.degToRad(inclinationDeg);
+  orbitLine.position.y = 0.002; // slight offset above equator to avoid z-fighting
+  orbitLine.name = `orbit_${radius}_${inclinationDeg}`;
+  return orbitLine;
+}
 
-  // create a transparent orbital plane (filled circle) slightly below/above the line
-  const planeGeom = new THREE.CircleGeometry(radius, Math.max(32, segments));
-  const planeMat = new THREE.MeshStandardMaterial({
+// Create a square orbital plane centered at origin with given side length and inclination
+function createOrbitPlane(side = 4, inclinationDeg = 0, color = 0xffffff, opacity = 0.18) {
+  const geom = new THREE.PlaneGeometry(side, side);
+  const mat = new THREE.MeshStandardMaterial({
     color: color,
     transparent: true,
-    opacity: 0.12,
+    opacity: opacity,
     side: THREE.DoubleSide,
     polygonOffset: true,
     polygonOffsetFactor: 1,
     polygonOffsetUnits: 1,
   });
-  const orbitPlane = new THREE.Mesh(planeGeom, planeMat);
-  orbitPlane.rotation.x = -Math.PI / 2; // make circle lie in XZ plane
+  const plane = new THREE.Mesh(geom, mat);
+  // make plane lie in XZ then incline
+  plane.rotation.x = -Math.PI / 2 + THREE.MathUtils.degToRad(inclinationDeg);
+  plane.position.y = 0.001; // slight offset
 
-  // group the plane and line and apply inclination to the group
+  // add an edge outline to make the plane more visible when transparent
+  const edges = new THREE.EdgesGeometry(geom);
+  const edgeMat = new THREE.LineBasicMaterial({ color: 0x223344, linewidth: 1 });
+  const edgeLines = new THREE.LineSegments(edges, edgeMat);
+  edgeLines.rotation.copy(plane.rotation);
+  edgeLines.position.copy(plane.position);
+
   const group = new THREE.Group();
-  group.add(orbitPlane);
-  orbitLine.position.y = 0.002;
-  orbitPlane.position.y = 0.001;
-  group.add(orbitLine);
-  group.rotation.x = THREE.MathUtils.degToRad(inclinationDeg);
-  group.name = `orbit_${radius}_${inclinationDeg}`;
+  group.add(plane);
+  group.add(edgeLines);
+  group.name = `orbitPlane_${side}_${inclinationDeg}`;
   return group;
 }
 
-// Example: add an inclined orbit at 30 degrees
-const inclinedOrbit = createOrbit(2.2, 30, 256, 0x44ff88);
-scene.add(inclinedOrbit);
+// Example: add an inclined orbit (circular) and separate square orbital plane at 30 degrees
+const orbitRadius = 2.2;
+const orbitInclination = 30;
+const inclinedOrbitLine = createOrbit(orbitRadius, orbitInclination, 256, 0x44ff88);
+scene.add(inclinedOrbitLine);
+const inclinedOrbitPlane = createOrbitPlane(orbitRadius * 2.0, orbitInclination, 0x44ff88, 0.12);
+scene.add(inclinedOrbitPlane);
 
 // Orbiting satellite along the inclined orbit
 const satOrbitRadius = 2.2;
