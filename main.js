@@ -63,6 +63,20 @@ const earthMaterial = new THREE.MeshStandardMaterial({
 const earth = new THREE.Mesh(earthGeometry, earthMaterial);
 scene.add(earth);
 
+// Equatorial plane through the middle of the earth
+const equatorGeometry = new THREE.PlaneGeometry(4, 4);
+const equatorMaterial = new THREE.MeshStandardMaterial({
+  color: 0x88ccee,
+  transparent: true,
+  opacity: 0.35,
+  side: THREE.DoubleSide,
+});
+const equator = new THREE.Mesh(equatorGeometry, equatorMaterial);
+equator.rotation.x = -Math.PI / 2; // rotate to XZ plane (horizontal)
+equator.position.y = 0; // through sphere center
+equator.name = "equator";
+scene.add(equator);
+
 const grid = new THREE.GridHelper(20, 20, 0x2b3a55, 0x1a2233);
 grid.position.y = -1.5;
 scene.add(grid);
