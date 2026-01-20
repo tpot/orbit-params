@@ -457,7 +457,7 @@ const animate = () => {
   const dt = clock.getDelta();
 
   // update satellite angle and position
-  satAngle += satSpeed * dt;
+  satAngle -= satSpeed * dt;
   const sr =
     (currentSemiMajorAxis * (1 - currentEccentricity * currentEccentricity)) /
     (1 + currentEccentricity * Math.cos(satAngle));
