@@ -200,6 +200,23 @@ function updateOrbitLine(line, semiMajorAxis, eccentricity, segments) {
   line.geometry.computeBoundingSphere();
 }
 
+function updateInclinationArc() {
+  const incRad = THREE.MathUtils.degToRad(currentInclinationDeg);
+  const geometry = new THREE.CylinderGeometry(
+    inclinationArcRadius,
+    inclinationArcRadius,
+    equatorSize,
+    64,
+    1,
+    false,
+    0,
+    incRad
+  );
+  geometry.rotateZ(Math.PI / 2);
+  inclinationArc.geometry.dispose();
+  inclinationArc.geometry = geometry;
+}
+
 // Create a square orbital plane centered at origin with given side length
 function createOrbitPlane(side = 4, color = 0xffffff, opacity = 0.18) {
   const geom = new THREE.PlaneGeometry(side, side);
@@ -258,6 +275,18 @@ const raanLine = new THREE.Line(raanLineGeom, raanLineMat);
 raanLine.position.y = 0.002;
 const orbitPlaneLabel = createLabelSprite("Orbital plane", { scale: 0.2 });
 orbitPlaneLabel.position.set(-orbitPlaneBaseSize / 2, 0.05, orbitPlaneBaseSize / 2);
+const inclinationArcRadius = equatorSize * 0.1;
+const inclinationArcMat = new THREE.MeshBasicMaterial({
+  color: 0xffb066,
+  transparent: true,
+  opacity: 0.35,
+  side: THREE.DoubleSide,
+});
+const inclinationArc = new THREE.Mesh(new THREE.BufferGeometry(), inclinationArcMat);
+const inclinationArcGroup = new THREE.Group();
+inclinationArcGroup.add(inclinationArc);
+inclinationArcGroup.position.set(0, 0, 0);
+inclinationArcGroup.rotation.y = Math.PI;
 const orbitGroup = new THREE.Group();
 orbitGroup.rotation.order = "YXZ";
 orbitGroup.add(inclinedOrbitLine);
@@ -268,6 +297,8 @@ orbitPlaneLabel.visible = labelsVisible;
 orbitGroup.rotation.x = THREE.MathUtils.degToRad(currentInclinationDeg);
 orbitGroup.rotation.y = THREE.MathUtils.degToRad(currentRaanDeg);
 scene.add(orbitGroup);
+scene.add(inclinationArcGroup);
+updateInclinationArc();
 
 // Orbiting satellite along the inclined orbit
 const satSpeed = 0.9; // radians per second
@@ -296,6 +327,7 @@ function setInclinationDeg(value) {
   const clamped = Math.min(180, Math.max(0, value));
   currentInclinationDeg = clamped;
   orbitGroup.rotation.x = THREE.MathUtils.degToRad(currentInclinationDeg);
+  updateInclinationArc();
 }
 
 function setRaanDeg(value) {
