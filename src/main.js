@@ -138,14 +138,8 @@ function buildOrbitPositions(semiMajorAxis, eccentricity, segments) {
   return pts;
 }
 
-// Create an orbit line at given semi-major axis, eccentricity, and inclination (degrees)
-function createOrbit(
-  semiMajorAxis = 2,
-  eccentricity = 0,
-  inclinationDeg = 0,
-  segments = 128,
-  color = 0xffffff
-) {
+// Create an orbit line at given semi-major axis and eccentricity.
+function createOrbit(semiMajorAxis = 2, eccentricity = 0, segments = 128, color = 0xffffff) {
   const geom = new THREE.BufferGeometry();
   geom.setAttribute(
     "position",
@@ -153,9 +147,8 @@ function createOrbit(
   );
   const mat = new THREE.LineBasicMaterial({ color: color });
   const orbitLine = new THREE.LineLoop(geom, mat);
-  orbitLine.rotation.x = THREE.MathUtils.degToRad(inclinationDeg);
   orbitLine.position.y = 0.002; // slight offset above equator to avoid z-fighting
-  orbitLine.name = `orbit_${semiMajorAxis}_${eccentricity}_${inclinationDeg}`;
+  orbitLine.name = `orbit_${semiMajorAxis}_${eccentricity}`;
   return orbitLine;
 }
 
@@ -168,8 +161,8 @@ function updateOrbitLine(line, semiMajorAxis, eccentricity, segments) {
   line.geometry.computeBoundingSphere();
 }
 
-// Create a square orbital plane centered at origin with given side length and inclination
-function createOrbitPlane(side = 4, inclinationDeg = 0, color = 0xffffff, opacity = 0.18) {
+// Create a square orbital plane centered at origin with given side length
+function createOrbitPlane(side = 4, color = 0xffffff, opacity = 0.18) {
   const geom = new THREE.PlaneGeometry(side, side);
   const mat = new THREE.MeshStandardMaterial({
     color: color,
@@ -181,8 +174,8 @@ function createOrbitPlane(side = 4, inclinationDeg = 0, color = 0xffffff, opacit
     polygonOffsetUnits: 1,
   });
   const plane = new THREE.Mesh(geom, mat);
-  // make plane lie in XZ then incline
-  plane.rotation.x = -Math.PI / 2 + THREE.MathUtils.degToRad(inclinationDeg);
+  // make plane lie in XZ
+  plane.rotation.x = -Math.PI / 2;
   plane.position.y = 0.001; // slight offset
 
   // add an edge outline to make the plane more visible when transparent
@@ -195,9 +188,7 @@ function createOrbitPlane(side = 4, inclinationDeg = 0, color = 0xffffff, opacit
   const group = new THREE.Group();
   group.add(plane);
   group.add(edgeLines);
-  group.userData.plane = plane;
-  group.userData.edges = edgeLines;
-  group.name = `orbitPlane_${side}_${inclinationDeg}`;
+  group.name = `orbitPlane_${side}`;
   return group;
 }
 
@@ -215,20 +206,17 @@ let currentRaanDeg = orbitRaanDeg;
 const inclinedOrbitLine = createOrbit(
   currentSemiMajorAxis,
   currentEccentricity,
-  orbitInclination,
   orbitSegments,
   0x44ff88
 );
-inclinedOrbitLine.rotation.y = THREE.MathUtils.degToRad(currentRaanDeg);
-scene.add(inclinedOrbitLine);
-const inclinedOrbitPlane = createOrbitPlane(
-  orbitPlaneBaseSize,
-  currentInclinationDeg,
-  0x44ff88,
-  0.12
-);
-inclinedOrbitPlane.rotation.y = THREE.MathUtils.degToRad(currentRaanDeg);
-scene.add(inclinedOrbitPlane);
+const inclinedOrbitPlane = createOrbitPlane(orbitPlaneBaseSize, 0x44ff88, 0.12);
+const orbitGroup = new THREE.Group();
+orbitGroup.rotation.order = "YXZ";
+orbitGroup.add(inclinedOrbitLine);
+orbitGroup.add(inclinedOrbitPlane);
+orbitGroup.rotation.x = THREE.MathUtils.degToRad(currentInclinationDeg);
+orbitGroup.rotation.y = THREE.MathUtils.degToRad(currentRaanDeg);
+scene.add(orbitGroup);
 
 // Orbiting satellite along the inclined orbit
 const satSpeed = 0.9; // radians per second
@@ -256,21 +244,13 @@ function setSemiMajorAxis(value) {
 function setInclinationDeg(value) {
   const clamped = Math.min(180, Math.max(0, value));
   currentInclinationDeg = clamped;
-  const incRad = THREE.MathUtils.degToRad(currentInclinationDeg);
-  inclinedOrbitLine.rotation.x = incRad;
-  if (inclinedOrbitPlane.userData.plane) {
-    const planeRotation = -Math.PI / 2 + incRad;
-    inclinedOrbitPlane.userData.plane.rotation.x = planeRotation;
-    inclinedOrbitPlane.userData.edges.rotation.x = planeRotation;
-  }
+  orbitGroup.rotation.x = THREE.MathUtils.degToRad(currentInclinationDeg);
 }
 
 function setRaanDeg(value) {
   const normalized = ((value % 360) + 360) % 360;
   currentRaanDeg = normalized;
-  const raanRad = THREE.MathUtils.degToRad(currentRaanDeg);
-  inclinedOrbitLine.rotation.y = raanRad;
-  inclinedOrbitPlane.rotation.y = raanRad;
+  orbitGroup.rotation.y = THREE.MathUtils.degToRad(currentRaanDeg);
 }
 
 function OrbitControlsPanel({
@@ -407,9 +387,8 @@ const animate = () => {
   const sx = sr * Math.cos(satAngle);
   const sz = sr * Math.sin(satAngle);
   const spos = new THREE.Vector3(sx, 0, sz);
-  // apply RAAN rotation about Y, then inclination rotation about X axis
-  spos.applyAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(currentRaanDeg));
-  spos.applyAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(currentInclinationDeg));
+  // project into the same plane/orientation as the orbit group
+  orbitGroup.localToWorld(spos);
   // slight offset in Y to avoid z-fighting with orbit plane
   satellite.position.copy(spos).add(new THREE.Vector3(0, 0.005, 0));
 
