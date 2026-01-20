@@ -64,12 +64,16 @@ directionalLight.position.set(5, 8, 5);
 scene.add(directionalLight);
 
 const earthGeometry = new THREE.SphereGeometry(1, 48, 48);
-const earthMaterial = new THREE.MeshStandardMaterial({
-  color: 0x2a6df4,
-  roughness: 0.75,
-  metalness: 0.05,
+const earthTexture = new THREE.TextureLoader().load(
+  "https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg"
+);
+earthTexture.colorSpace = THREE.SRGBColorSpace;
+const earthMaterial = new THREE.MeshBasicMaterial({
+  map: earthTexture,
 });
 const earth = new THREE.Mesh(earthGeometry, earthMaterial);
+earth.castShadow = false;
+earth.receiveShadow = false;
 scene.add(earth);
 
 // Equatorial plane helper
