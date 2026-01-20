@@ -45,3 +45,29 @@ canvas {
 .panel input[type="range"] {
   width: 200px;
 }
+
+#attribution {
+  position: fixed;
+  left: 16px;
+  bottom: 14px;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: #1a2540;
+  background: rgba(230, 238, 255, 0.9);
+  border: 1px solid rgba(18, 32, 80, 0.35);
+  border-radius: 999px;
+  padding: 6px 10px;
+  z-index: 10;
+  display: grid;
+  gap: 2px;
+}
+
+#attribution a {
+  color: #143a8a;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+#attribution a:hover {
+  text-decoration: underline;
+}
