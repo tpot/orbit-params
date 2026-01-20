@@ -46,6 +46,13 @@ canvas {
   width: 200px;
 }
 
+.panel-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
 #attribution {
   position: fixed;
   left: 16px;

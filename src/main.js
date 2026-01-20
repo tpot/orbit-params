@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "https://esm.sh/react@18.2.0";
 import { createRoot } from "https://esm.sh/react-dom@18.2.0/client";
 
 const app = document.getElementById("app");
+let labelsVisible = true;
 let uiRoot = document.getElementById("ui");
 if (!uiRoot) {
   uiRoot = document.createElement("div");
@@ -98,6 +99,7 @@ const equator = addEquatorialPlane(scene, equatorSize, 0x88ccee, 0.35, 0);
 const equatorLabel = createLabelSprite("Equatorial plane", { scale: 0.2 });
 equatorLabel.position.set(-equatorSize / 2, 0.05, equatorSize / 2);
 scene.add(equatorLabel);
+equatorLabel.visible = labelsVisible;
 
 // First Point of Aries reference: radial line + marker on equatorial plane
 function addFirstPointOfAries(scene, radius = 4.0, y = 0.003, color = 0xffdd33) {
@@ -254,6 +256,7 @@ orbitGroup.rotation.order = "YXZ";
 orbitGroup.add(inclinedOrbitLine);
 orbitGroup.add(inclinedOrbitPlane);
 orbitGroup.add(orbitPlaneLabel);
+orbitPlaneLabel.visible = labelsVisible;
 orbitGroup.rotation.x = THREE.MathUtils.degToRad(currentInclinationDeg);
 orbitGroup.rotation.y = THREE.MathUtils.degToRad(currentRaanDeg);
 scene.add(orbitGroup);
@@ -293,20 +296,29 @@ function setRaanDeg(value) {
   orbitGroup.rotation.y = THREE.MathUtils.degToRad(currentRaanDeg);
 }
 
+function setLabelsVisible(value) {
+  labelsVisible = value;
+  equatorLabel.visible = labelsVisible;
+  orbitPlaneLabel.visible = labelsVisible;
+}
+
 function OrbitControlsPanel({
   initialEcc,
   initialAxis,
   initialInclination,
   initialRaan,
+  initialLabelsVisible,
   onEccChange,
   onAxisChange,
   onInclinationChange,
   onRaanChange,
+  onLabelsToggle,
 }) {
   const [eccentricity, setEccentricityState] = useState(initialEcc);
   const [semiMajorAxis, setSemiMajorAxisState] = useState(initialAxis);
   const [inclinationDeg, setInclinationDegState] = useState(initialInclination);
   const [raanDeg, setRaanDegState] = useState(initialRaan);
+  const [labelsOn, setLabelsOn] = useState(initialLabelsVisible);
 
   useEffect(() => {
     onEccChange(eccentricity);
@@ -323,6 +335,10 @@ function OrbitControlsPanel({
   useEffect(() => {
     onRaanChange(raanDeg);
   }, [raanDeg, onRaanChange]);
+
+  useEffect(() => {
+    onLabelsToggle(labelsOn);
+  }, [labelsOn, onLabelsToggle]);
 
   return React.createElement(
     React.Fragment,
@@ -386,7 +402,18 @@ function OrbitControlsPanel({
       step: 1,
       value: raanDeg,
       onChange: (event) => setRaanDegState(parseFloat(event.target.value)),
-    })
+    }),
+    React.createElement(
+      "div",
+      { className: "panel-row" },
+      React.createElement("label", { htmlFor: "labels" }, "Labels"),
+      React.createElement("input", {
+        id: "labels",
+        type: "checkbox",
+        checked: labelsOn,
+        onChange: (event) => setLabelsOn(event.target.checked),
+      })
+    )
   );
 }
 
@@ -398,10 +425,12 @@ if (uiRoot) {
       initialAxis: currentSemiMajorAxis,
       initialInclination: currentInclinationDeg,
       initialRaan: currentRaanDeg,
+      initialLabelsVisible: labelsVisible,
       onEccChange: setEccentricity,
       onAxisChange: setSemiMajorAxis,
       onInclinationChange: setInclinationDeg,
       onRaanChange: setRaanDeg,
+      onLabelsToggle: setLabelsVisible,
     })
   );
 }
