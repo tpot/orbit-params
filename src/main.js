@@ -200,9 +200,11 @@ const orbitSemiMajorAxis = 2;
 const orbitEccentricity = 0.6;
 const orbitInclination = 40;
 const orbitSegments = 256;
+const orbitPlaneBaseSize = orbitSemiMajorAxis * 2.0;
 let currentEccentricity = orbitEccentricity;
+let currentSemiMajorAxis = orbitSemiMajorAxis;
 const inclinedOrbitLine = createOrbit(
-  orbitSemiMajorAxis,
+  currentSemiMajorAxis,
   currentEccentricity,
   orbitInclination,
   orbitSegments,
@@ -210,7 +212,7 @@ const inclinedOrbitLine = createOrbit(
 );
 scene.add(inclinedOrbitLine);
 const inclinedOrbitPlane = createOrbitPlane(
-  orbitSemiMajorAxis * 2.0,
+  orbitPlaneBaseSize,
   orbitInclination,
   0x44ff88,
   0.12
@@ -218,7 +220,6 @@ const inclinedOrbitPlane = createOrbitPlane(
 scene.add(inclinedOrbitPlane);
 
 // Orbiting satellite along the inclined orbit
-const satSemiMajorAxis = orbitSemiMajorAxis;
 const satInclinationDeg = orbitInclination;
 const satSpeed = 0.9; // radians per second
 let satAngle = 0;
@@ -229,17 +230,30 @@ satellite.name = "satellite";
 scene.add(satellite);
 
 function setEccentricity(value) {
-  const clamped = Math.min(0.99, Math.max(0, value));
+  const clamped = Math.min(0.9, Math.max(0, value));
   currentEccentricity = clamped;
-  updateOrbitLine(inclinedOrbitLine, orbitSemiMajorAxis, currentEccentricity, orbitSegments);
+  updateOrbitLine(inclinedOrbitLine, currentSemiMajorAxis, currentEccentricity, orbitSegments);
 }
 
-function EccentricityControl({ initial, onChange }) {
-  const [value, setValue] = useState(initial);
+function setSemiMajorAxis(value) {
+  const clamped = Math.min(6, Math.max(0.5, value));
+  currentSemiMajorAxis = clamped;
+  updateOrbitLine(inclinedOrbitLine, currentSemiMajorAxis, currentEccentricity, orbitSegments);
+  const planeScale = currentSemiMajorAxis / orbitSemiMajorAxis;
+  inclinedOrbitPlane.scale.set(planeScale, planeScale, planeScale);
+}
+
+function OrbitControlsPanel({ initialEcc, initialAxis, onEccChange, onAxisChange }) {
+  const [eccentricity, setEccentricityState] = useState(initialEcc);
+  const [semiMajorAxis, setSemiMajorAxisState] = useState(initialAxis);
 
   useEffect(() => {
-    onChange(value);
-  }, [value, onChange]);
+    onEccChange(eccentricity);
+  }, [eccentricity, onEccChange]);
+
+  useEffect(() => {
+    onAxisChange(semiMajorAxis);
+  }, [semiMajorAxis, onAxisChange]);
 
   return React.createElement(
     React.Fragment,
@@ -248,23 +262,45 @@ function EccentricityControl({ initial, onChange }) {
       "label",
       { htmlFor: "eccentricity" },
       "Eccentricity",
-      React.createElement("span", null, value.toFixed(2))
+      React.createElement("span", null, eccentricity.toFixed(2))
     ),
     React.createElement("input", {
       id: "eccentricity",
       type: "range",
       min: 0,
-      max: 0.99,
+      max: 0.9,
       step: 0.01,
-      value: value,
-      onChange: (event) => setValue(parseFloat(event.target.value)),
+      value: eccentricity,
+      onChange: (event) => setEccentricityState(parseFloat(event.target.value)),
+    }),
+    React.createElement(
+      "label",
+      { htmlFor: "semiMajorAxis" },
+      "Semi-Major Axis",
+      React.createElement("span", null, semiMajorAxis.toFixed(2))
+    ),
+    React.createElement("input", {
+      id: "semiMajorAxis",
+      type: "range",
+      min: 0.5,
+      max: 6,
+      step: 0.05,
+      value: semiMajorAxis,
+      onChange: (event) => setSemiMajorAxisState(parseFloat(event.target.value)),
     })
   );
 }
 
 if (uiRoot) {
   const root = createRoot(uiRoot);
-  root.render(React.createElement(EccentricityControl, { initial: currentEccentricity, onChange: setEccentricity }));
+  root.render(
+    React.createElement(OrbitControlsPanel, {
+      initialEcc: currentEccentricity,
+      initialAxis: currentSemiMajorAxis,
+      onEccChange: setEccentricity,
+      onAxisChange: setSemiMajorAxis,
+    })
+  );
 }
 
 // clock for consistent motion
@@ -283,7 +319,7 @@ const animate = () => {
   // update satellite angle and position
   satAngle += satSpeed * dt;
   const sr =
-    (satSemiMajorAxis * (1 - currentEccentricity * currentEccentricity)) /
+    (currentSemiMajorAxis * (1 - currentEccentricity * currentEccentricity)) /
     (1 + currentEccentricity * Math.cos(satAngle));
   const sx = sr * Math.cos(satAngle);
   const sz = sr * Math.sin(satAngle);
