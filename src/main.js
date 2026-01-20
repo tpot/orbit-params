@@ -249,12 +249,20 @@ const inclinedOrbitLine = createOrbit(
   0x44ff88
 );
 const inclinedOrbitPlane = createOrbitPlane(orbitPlaneBaseSize, 0x44ff88, 0.12);
+const raanLineGeom = new THREE.BufferGeometry().setFromPoints([
+  new THREE.Vector3(0, 0, 0),
+  new THREE.Vector3(orbitPlaneBaseSize / 2, 0, 0),
+]);
+const raanLineMat = new THREE.LineBasicMaterial({ color: 0x9dffbf });
+const raanLine = new THREE.Line(raanLineGeom, raanLineMat);
+raanLine.position.y = 0.002;
 const orbitPlaneLabel = createLabelSprite("Orbital plane", { scale: 0.2 });
 orbitPlaneLabel.position.set(-orbitPlaneBaseSize / 2, 0.05, orbitPlaneBaseSize / 2);
 const orbitGroup = new THREE.Group();
 orbitGroup.rotation.order = "YXZ";
 orbitGroup.add(inclinedOrbitLine);
 orbitGroup.add(inclinedOrbitPlane);
+orbitGroup.add(raanLine);
 orbitGroup.add(orbitPlaneLabel);
 orbitPlaneLabel.visible = labelsVisible;
 orbitGroup.rotation.x = THREE.MathUtils.degToRad(currentInclinationDeg);
