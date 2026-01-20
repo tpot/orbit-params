@@ -93,7 +93,11 @@ function addEquatorialPlane(scene, size = 4, color = 0x88ccee, opacity = 0.35, y
   return mesh;
 }
 
-const equator = addEquatorialPlane(scene, 4, 0x88ccee, 0.35, 0);
+const equatorSize = 4;
+const equator = addEquatorialPlane(scene, equatorSize, 0x88ccee, 0.35, 0);
+const equatorLabel = createLabelSprite("Equatorial plane", { scale: 0.2 });
+equatorLabel.position.set(-equatorSize / 2, 0.05, equatorSize / 2);
+scene.add(equatorLabel);
 
 // First Point of Aries reference: radial line + marker on equatorial plane
 function addFirstPointOfAries(scene, radius = 4.0, y = 0.003, color = 0xffdd33) {
@@ -119,6 +123,39 @@ addFirstPointOfAries(scene, 4.0, 0.003, 0xffdd33);
 const grid = new THREE.GridHelper(20, 20, 0x2b3a55, 0x1a2233);
 grid.position.y = -1.5;
 scene.add(grid);
+
+function createLabelSprite(text, options = {}) {
+  const fontSize = options.fontSize || 32;
+  const padding = options.padding || 16;
+  const fontFamily = options.fontFamily || "Trebuchet MS, Verdana, sans-serif";
+  const color = options.color || "#e6eeff";
+  const background = options.background || "rgba(12, 18, 32, 0.7)";
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  ctx.font = `${fontSize}px ${fontFamily}`;
+  const metrics = ctx.measureText(text);
+  const textWidth = Math.ceil(metrics.width);
+  const textHeight = Math.ceil(fontSize * 1.2);
+  canvas.width = textWidth + padding * 2;
+  canvas.height = textHeight + padding * 2;
+
+  ctx.fillStyle = background;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = color;
+  ctx.textBaseline = "middle";
+  ctx.font = `${fontSize}px ${fontFamily}`;
+  ctx.fillText(text, padding, canvas.height / 2);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
+  const sprite = new THREE.Sprite(material);
+  const scale = options.scale || 2.5;
+  sprite.scale.set((canvas.width / canvas.height) * scale, scale, 1);
+  sprite.renderOrder = 10;
+  return sprite;
+}
 
 function buildOrbitPositions(semiMajorAxis, eccentricity, segments) {
   const pts = new Float32Array((segments + 1) * 3);
@@ -210,10 +247,13 @@ const inclinedOrbitLine = createOrbit(
   0x44ff88
 );
 const inclinedOrbitPlane = createOrbitPlane(orbitPlaneBaseSize, 0x44ff88, 0.12);
+const orbitPlaneLabel = createLabelSprite("Orbital plane", { scale: 0.2 });
+orbitPlaneLabel.position.set(-orbitPlaneBaseSize / 2, 0.05, orbitPlaneBaseSize / 2);
 const orbitGroup = new THREE.Group();
 orbitGroup.rotation.order = "YXZ";
 orbitGroup.add(inclinedOrbitLine);
 orbitGroup.add(inclinedOrbitPlane);
+orbitGroup.add(orbitPlaneLabel);
 orbitGroup.rotation.x = THREE.MathUtils.degToRad(currentInclinationDeg);
 orbitGroup.rotation.y = THREE.MathUtils.degToRad(currentRaanDeg);
 scene.add(orbitGroup);
