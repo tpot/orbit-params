@@ -199,10 +199,12 @@ function createOrbitPlane(side = 4, inclinationDeg = 0, color = 0xffffff, opacit
 const orbitSemiMajorAxis = 2;
 const orbitEccentricity = 0.6;
 const orbitInclination = 40;
+const orbitRaanDeg = 0;
 const orbitSegments = 256;
 const orbitPlaneBaseSize = orbitSemiMajorAxis * 2.0;
 let currentEccentricity = orbitEccentricity;
 let currentSemiMajorAxis = orbitSemiMajorAxis;
+let currentRaanDeg = orbitRaanDeg;
 const inclinedOrbitLine = createOrbit(
   currentSemiMajorAxis,
   currentEccentricity,
@@ -210,6 +212,7 @@ const inclinedOrbitLine = createOrbit(
   orbitSegments,
   0x44ff88
 );
+inclinedOrbitLine.rotation.y = THREE.MathUtils.degToRad(currentRaanDeg);
 scene.add(inclinedOrbitLine);
 const inclinedOrbitPlane = createOrbitPlane(
   orbitPlaneBaseSize,
@@ -217,6 +220,7 @@ const inclinedOrbitPlane = createOrbitPlane(
   0x44ff88,
   0.12
 );
+inclinedOrbitPlane.rotation.y = THREE.MathUtils.degToRad(currentRaanDeg);
 scene.add(inclinedOrbitPlane);
 
 // Orbiting satellite along the inclined orbit
@@ -243,9 +247,25 @@ function setSemiMajorAxis(value) {
   inclinedOrbitPlane.scale.set(planeScale, planeScale, planeScale);
 }
 
-function OrbitControlsPanel({ initialEcc, initialAxis, onEccChange, onAxisChange }) {
+function setRaanDeg(value) {
+  const normalized = ((value % 360) + 360) % 360;
+  currentRaanDeg = normalized;
+  const raanRad = THREE.MathUtils.degToRad(currentRaanDeg);
+  inclinedOrbitLine.rotation.y = raanRad;
+  inclinedOrbitPlane.rotation.y = raanRad;
+}
+
+function OrbitControlsPanel({
+  initialEcc,
+  initialAxis,
+  initialRaan,
+  onEccChange,
+  onAxisChange,
+  onRaanChange,
+}) {
   const [eccentricity, setEccentricityState] = useState(initialEcc);
   const [semiMajorAxis, setSemiMajorAxisState] = useState(initialAxis);
+  const [raanDeg, setRaanDegState] = useState(initialRaan);
 
   useEffect(() => {
     onEccChange(eccentricity);
@@ -254,6 +274,10 @@ function OrbitControlsPanel({ initialEcc, initialAxis, onEccChange, onAxisChange
   useEffect(() => {
     onAxisChange(semiMajorAxis);
   }, [semiMajorAxis, onAxisChange]);
+
+  useEffect(() => {
+    onRaanChange(raanDeg);
+  }, [raanDeg, onRaanChange]);
 
   return React.createElement(
     React.Fragment,
@@ -288,6 +312,22 @@ function OrbitControlsPanel({ initialEcc, initialAxis, onEccChange, onAxisChange
       value: semiMajorAxis,
       onChange: (event) => setSemiMajorAxisState(parseFloat(event.target.value)),
     })
+    ,
+    React.createElement(
+      "label",
+      { htmlFor: "raan" },
+      "RAAN (deg)",
+      React.createElement("span", null, raanDeg.toFixed(0))
+    ),
+    React.createElement("input", {
+      id: "raan",
+      type: "range",
+      min: 0,
+      max: 360,
+      step: 1,
+      value: raanDeg,
+      onChange: (event) => setRaanDegState(parseFloat(event.target.value)),
+    })
   );
 }
 
@@ -297,8 +337,10 @@ if (uiRoot) {
     React.createElement(OrbitControlsPanel, {
       initialEcc: currentEccentricity,
       initialAxis: currentSemiMajorAxis,
+      initialRaan: currentRaanDeg,
       onEccChange: setEccentricity,
       onAxisChange: setSemiMajorAxis,
+      onRaanChange: setRaanDeg,
     })
   );
 }
@@ -324,7 +366,8 @@ const animate = () => {
   const sx = sr * Math.cos(satAngle);
   const sz = sr * Math.sin(satAngle);
   const spos = new THREE.Vector3(sx, 0, sz);
-  // apply inclination rotation about X axis
+  // apply RAAN rotation about Y, then inclination rotation about X axis
+  spos.applyAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(currentRaanDeg));
   spos.applyAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(satInclinationDeg));
   // slight offset in Y to avoid z-fighting with orbit plane
   satellite.position.copy(spos).add(new THREE.Vector3(0, 0.005, 0));
